@@ -28,6 +28,10 @@ func (l LossType) String() string {
 		return "BinCE"
 	case LossMeanSquared:
 		return "MSE"
+	case LossActor:
+		return "APG"
+	case LossCritic:
+		return "CPG"
 	}
 	return "N/A"
 }
@@ -41,6 +45,10 @@ const (
 	LossBinaryCrossEntropy LossType = 2
 	// LossMeanSquared is MSE
 	LossMeanSquared LossType = 3
+	// ActorPolicyGradient
+	LossActor LossType = 4
+	// CriticPolicyGradient
+	LossCritic LossType = 5
 )
 
 // Loss is satisfied by loss functions
@@ -71,6 +79,38 @@ func (l CrossEntropy) F(estimate, ideal [][]float64) float64 {
 func (l CrossEntropy) Df(estimate, ideal, activation float64) float64 {
 	return estimate - ideal
 }
+
+// Actor Policy Gradient
+type ActorPolicyGradient struct{}
+
+// No need for F as loss is precalculated based on action
+
+// Df is J'(theta)
+func (l ActorPolicyGradient) Df(pi, delta, activation float64) float64{
+	/*
+		delta = reward + gamma*new_state_val - state_val
+		loss = -delta * log(pi)
+		observe estimate = pi
+		Need to find dloss/dOutput = dloss/destimate * destimate/dOutput
+		=> dloss/destimate = d(-delta*log(pi))/dpi
+						   = -delta/pi
+		so
+		dloss/doutput = -delta/pi * activation
+	*/
+	return -delta/pi * activation
+}
+
+type CriticPolicyGradient struct{}
+
+func (l CriticPolicyGradient) Df(estimate, deltagamma, activation float64) float64{
+	/*
+	loss = delta**2
+		dloss/dOutput = dloss/destimate * destimate/dOutput
+		 = 2*delta*(gamma) * activation
+	*/
+	return 2 * deltagamma * activation
+}
+
 
 // BinaryCrossEntropy is binary CE loss
 type BinaryCrossEntropy struct{}
@@ -112,3 +152,4 @@ func (l MeanSquared) F(estimate, ideal [][]float64) float64 {
 func (l MeanSquared) Df(estimate, ideal, activation float64) float64 {
 	return activation * (estimate - ideal)
 }
+
